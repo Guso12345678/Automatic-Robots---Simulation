@@ -1,5 +1,6 @@
 from amr_simulation.robot import Robot
 from typing import Any
+import numpy as np
 
 
 class TurtleBot3Burger(Robot):
@@ -37,7 +38,26 @@ class TurtleBot3Burger(Robot):
 
         """
         # TODO: 2.1. Complete the function body with your code (i.e., replace the pass statement).
-        pass
+        array_velocidad = np.array([v, 0, w])
+        matriz = np.array([1/self.WHEEL_RADIUS,0,(-self.TRACK*0.5)/self.WHEEL_RADIUS],[1/self.WHEEL_RADIUS,0,(self.TRACK*0.5)/(self.WHEEL_RADIUS)])
+        ruedas = np.dot(matriz,array_velocidad.transpose())
+        velocidad_rueda_izq,velocidad_rueda_dcha = ruedas[0], ruedas[1]
+
+        if velocidad_rueda_izq >= self.WHEEL_SPEED_MAX: 
+            velocidad_rueda_izq = self.WHEEL_SPEED_MAX 
+            velocidad_rueda_dcha = (velocidad_rueda_dcha*self.WHEEL_SPEED_MAX)/(velocidad_rueda_izq) 
+            self._sim.setJointTargetVelocity(self._motors["left"],velocidad_rueda_izq)
+            self._sim.setJointTargetVelocity(self._motors["right"],velocidad_rueda_dcha)
+
+        if velocidad_rueda_dcha >= self.WHEEL_SPEED_MAX: 
+            velocidad_rueda_dcha = self.WHEEL_SPEED_MAX
+            velocidad_rueda_izq = (velocidad_rueda_izq*self.WHEEL_SPEED_MAX)/(velocidad_rueda_dcha)  
+            self._sim.setJointTargetVelocity(self._motors["left"],velocidad_rueda_izq)
+            self._sim.setJointTargetVelocity(self._motors["right"],velocidad_rueda_dcha)
+
+        else: 
+            self._sim.setJointTargetVelocity(self._motors["left"],velocidad_rueda_izq)
+            self._sim.setJointTargetVelocity(self._motors["right"],velocidad_rueda_dcha)
         
     def sense(self) -> tuple[list[float], float, float]:
         """Read the LiDAR and the encoders.
@@ -90,9 +110,11 @@ class TurtleBot3Burger(Robot):
         )
 
         # TODO: 2.2. Compute the derivatives of the angular positions to obtain velocities [rad/s].
-        
+        velocity_angular_right = encoders["right"] / self._dt
+        velocity_angular_left = encoders["left"] / self._dt
+
         # TODO: 2.3. Solve forward differential kinematics (i.e., calculate z_v and z_w).
-        z_v = 0.0
-        z_w = 0.0
+        z_v = (velocity_angular_right + velocity_angular_left) * self.WHEEL_RADIUS / 2
+        z_w = (velocity_angular_right - velocity_angular_left) * self.WHEEL_RADIUS / self.TRACK
         
         return z_v, z_w
