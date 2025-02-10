@@ -1,6 +1,5 @@
 from amr_simulation.robot import Robot
 from typing import Any
-import numpy as np
 
 
 class TurtleBot3Burger(Robot):
@@ -37,33 +36,9 @@ class TurtleBot3Burger(Robot):
             w: Angular velocity of the robot center [rad/s].
 
         """
-        array_velocidad = np.array([v, 0, w])
-
-        # Crear la matriz de kinemática inversa
-        matriz = np.array([
-            [1/self.WHEEL_RADIUS, 0, (-self.TRACK * 0.5) / self.WHEEL_RADIUS],
-            [1/self.WHEEL_RADIUS, 0, (self.TRACK * 0.5) / self.WHEEL_RADIUS]
-        ])
-
-        # Calcular las velocidades de las ruedas
-        ruedas = np.dot(matriz, array_velocidad.transpose())
-        velocidad_rueda_izq, velocidad_rueda_dcha = ruedas[0], ruedas[1]
-
-        # Ajustar las velocidades si exceden el máximo permitido
-        if abs(velocidad_rueda_izq) > self.WHEEL_SPEED_MAX:
-            velocidad_rueda_izq = np.clip(velocidad_rueda_izq, -self.WHEEL_SPEED_MAX, self.WHEEL_SPEED_MAX)
-            velocidad_rueda_dcha = (velocidad_rueda_dcha * velocidad_rueda_izq) / abs(velocidad_rueda_izq)
-
-        if abs(velocidad_rueda_dcha) > self.WHEEL_SPEED_MAX:
-            velocidad_rueda_dcha = np.clip(velocidad_rueda_dcha, -self.WHEEL_SPEED_MAX, self.WHEEL_SPEED_MAX)
-            velocidad_rueda_izq = (velocidad_rueda_izq * velocidad_rueda_dcha) / abs(velocidad_rueda_dcha)
-
-        # Enviar las velocidades a los motores
-        self._sim.setJointTargetVelocity(self._motors["left"], velocidad_rueda_izq)
-        self._sim.setJointTargetVelocity(self._motors["right"], velocidad_rueda_dcha)
-
-
-
+        # TODO: 2.1. Complete the function body with your code (i.e., replace the pass statement).
+        pass
+        
     def sense(self) -> tuple[list[float], float, float]:
         """Read the LiDAR and the encoders.
 
@@ -115,12 +90,9 @@ class TurtleBot3Burger(Robot):
         )
 
         # TODO: 2.2. Compute the derivatives of the angular positions to obtain velocities [rad/s].
-        velocity_angular_right = encoders["right"] / self._dt
-        velocity_angular_left = encoders["left"] / self._dt
-
-
+        
         # TODO: 2.3. Solve forward differential kinematics (i.e., calculate z_v and z_w).
-        z_v = ((velocity_angular_left+velocity_angular_right)*self.WHEEL_RADIUS)/(2)
-        z_w = ((velocity_angular_right-velocity_angular_left)*self.WHEEL_RADIUS)/(self.TRACK)
+        z_v = 0.0
+        z_w = 0.0
         
         return z_v, z_w

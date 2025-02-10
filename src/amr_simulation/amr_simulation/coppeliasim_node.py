@@ -52,16 +52,13 @@ class CoppeliaSimNode(LifecycleNode):
             )
 
             # Subscribers
-            qos_profile = QoSProfile(history = QoSHistoryPolicy.KEEP_LAST,depth = 10, reliability = QoSReliabilityPolicy.BEST_EFFORT, durability = QoSDurabilityPolicy.VOLATILE)
             # TODO: 2.12. Subscribe to /cmd_vel. Connect it with with _next_step_callback.
-            self._subscriber_velocidad = self.create_subscription(msg_type=TwistStamped,topic="/cmd_vel",callback=self._next_step_callback,qos_profile=qos_profile)
+            
             # TODO: 3.3. Sync the /pose and /cmd_vel subscribers if enable_localization is True.
             
             # Publishers
             # TODO: 2.4. Create the /odometry (Odometry message) and /scan (LaserScan) publishers.
-            self._publisher_odometry = self.create_publisher(msg_type=Odometry,topic="/odometry",qos_profile = qos_profile)
-            self._publisher_scan = self.create_publisher(msg_type=LaserScan,topic="/scan",qos_profile=qos_profile)
-
+            
             # Attribute and object initializations
             self._coppeliasim = CoppeliaSim(dt, start, goal_tolerance)
             self._robot = TurtleBot3Burger(self._coppeliasim.sim, dt)
@@ -111,8 +108,8 @@ class CoppeliaSimNode(LifecycleNode):
         self._check_estimated_pose(pose_msg)
 
         # TODO: 2.13. Parse the velocities from the TwistStamped message (i.e., read v and w).
-        v: float = cmd_vel_msg.twist.linear.x
-        w: float = cmd_vel_msg.twist.angular.z
+        v: float = 0.0
+        w: float = 0.0
         
         # Execute simulation step
         self._robot.move(v, w)
@@ -219,11 +216,7 @@ class CoppeliaSimNode(LifecycleNode):
 
         """
         # TODO: 2.5. Complete the function body with your code (i.e., replace the pass statement).
-        odometria_mensaje = Odometry()
-        odometria_mensaje.twist.twist.linear.x = z_v
-        odometria_mensaje.twist.twist.angular.z = z_w
-        self._publisher_odometry.publish(odometria_mensaje)
-        
+        pass
         
     def _publish_scan(self, z_scan: list[float]) -> None:
         """Publishes LiDAR measurements in a sensor_msgs.msg.LaserScan message.
@@ -233,9 +226,7 @@ class CoppeliaSimNode(LifecycleNode):
 
         """
         # TODO: 2.6. Complete the function body with your code (i.e., replace the pass statement).
-        laser_mensaje = LaserScan()
-        laser_mensaje.ranges = z_scan
-        self._publisher_scan.publish(laser_mensaje)
+        pass
         
 
 def main(args=None):

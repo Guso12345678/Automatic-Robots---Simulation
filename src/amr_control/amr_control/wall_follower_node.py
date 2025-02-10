@@ -40,22 +40,11 @@ class WallFollowerNode(LifecycleNode):
 
             # Subscribers
             # TODO: 2.7. Synchronize _compute_commands_callback with /odometry and /scan.
-            self._subscribers:list[message_filters.Subscriber]=[]
-            qos_profile = QoSProfile(history = QoSHistoryPolicy.KEEP_LAST,depth = 10, reliability = QoSReliabilityPolicy.BEST_EFFORT, durability = QoSDurabilityPolicy.VOLATILE)
-            # Append as many topics as needed
-            self._subscribers.append(
-                message_filters.Subscriber(self,Odometry,"/odometry",qos_profile=qos_profile))
-            self._subscribers.append(
-                message_filters.Subscriber(self,LaserScan,"/scan",qos_profile=qos_profile)
-            )
-            ts = message_filters.ApproximateTimeSynchronizer(self._subscribers,queue_size=10,slop=9)
-            ts.registerCallback(self._compute_commands_callback)
-
             # TODO: 4.12. Add /pose to the synced subscriptions only if localization is enabled.
             
             # Publishers
             # TODO: 2.10. Create the /cmd_vel velocity commands publisher (TwistStamped message).
-            self._publisher_velocidad = self.create_publisher(msg_type=TwistStamped,topic="/cmd_vel",qos_profile=10)
+            
             # Attribute and object initializations
             self._wall_follower = WallFollower(dt)
 
@@ -91,11 +80,11 @@ class WallFollowerNode(LifecycleNode):
         """
         if not pose_msg.localized:
             # TODO: 2.8. Parse the odometry from the Odometry message (i.e., read z_v and z_w).
-            z_v: float = odom_msg.twist.twist.linear.x
-            z_w: float = odom_msg.twist.twist.angular.z
+            z_v: float = 0.0
+            z_w: float = 0.0
             
             # TODO: 2.9. Parse LiDAR measurements from the LaserScan message (i.e., read z_scan).
-            z_scan: list[float] = scan_msg.ranges 
+            z_scan: list[float] = []
             
             # Execute wall follower
             v, w = self._wall_follower.compute_commands(z_scan, z_v, z_w)
@@ -113,10 +102,7 @@ class WallFollowerNode(LifecycleNode):
 
         """
         # TODO: 2.11. Complete the function body with your code (i.e., replace the pass statement).
-        mensaje_twist_stamped = TwistStamped()
-        mensaje_twist_stamped.twist.linear.x = v
-        mensaje_twist_stamped.twist.angular.z = w
-        self._publisher_velocidad.publish(mensaje_twist_stamped)
+        pass
         
 
 def main(args=None):
