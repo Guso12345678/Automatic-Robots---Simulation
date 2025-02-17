@@ -38,27 +38,33 @@ class TurtleBot3Burger(Robot):
 
         """
         # TODO: 2.1. Complete the function body with your code (i.e., replace the pass statement).
-        array_velocidad = np.array([v, 0, w])
-        matriz = np.array([1/self.WHEEL_RADIUS,0,(-self.TRACK*0.5)/self.WHEEL_RADIUS],[1/self.WHEEL_RADIUS,0,(self.TRACK*0.5)/(self.WHEEL_RADIUS)])
-        ruedas = np.dot(matriz,array_velocidad.transpose())
-        velocidad_rueda_izq,velocidad_rueda_dcha = ruedas[0], ruedas[1]
+        velocity_vector = np.array([v, 0, w])
 
-        if velocidad_rueda_izq >= self.WHEEL_SPEED_MAX: 
-            velocidad_rueda_izq = self.WHEEL_SPEED_MAX 
-            velocidad_rueda_dcha = (velocidad_rueda_dcha*self.WHEEL_SPEED_MAX)/(velocidad_rueda_izq) 
-            self._sim.setJointTargetVelocity(self._motors["left"],velocidad_rueda_izq)
-            self._sim.setJointTargetVelocity(self._motors["right"],velocidad_rueda_dcha)
+        kinematics_matrix = np.array(
+            [
+                [1 / self.WHEEL_RADIUS, 0, (-self.TRACK * 0.5) / self.WHEEL_RADIUS],
+                [1 / self.WHEEL_RADIUS, 0, (self.TRACK * 0.5) / self.WHEEL_RADIUS],
+            ]
+        )
 
-        if velocidad_rueda_dcha >= self.WHEEL_SPEED_MAX: 
-            velocidad_rueda_dcha = self.WHEEL_SPEED_MAX
-            velocidad_rueda_izq = (velocidad_rueda_izq*self.WHEEL_SPEED_MAX)/(velocidad_rueda_dcha)  
-            self._sim.setJointTargetVelocity(self._motors["left"],velocidad_rueda_izq)
-            self._sim.setJointTargetVelocity(self._motors["right"],velocidad_rueda_dcha)
+        wheel_speeds = np.dot(kinematics_matrix, velocity_vector.transpose())
+        left_wheel_speed, right_wheel_speed = wheel_speeds[0], wheel_speeds[1]
 
-        else: 
-            self._sim.setJointTargetVelocity(self._motors["left"],velocidad_rueda_izq)
-            self._sim.setJointTargetVelocity(self._motors["right"],velocidad_rueda_dcha)
-        
+        if abs(left_wheel_speed) > self.WHEEL_SPEED_MAX:
+            left_wheel_speed = np.clip(
+                left_wheel_speed, -self.WHEEL_SPEED_MAX, self.WHEEL_SPEED_MAX
+            )
+            right_wheel_speed = (right_wheel_speed * left_wheel_speed) / abs(left_wheel_speed)
+
+        if abs(right_wheel_speed) > self.WHEEL_SPEED_MAX:
+            right_wheel_speed = np.clip(
+                right_wheel_speed, -self.WHEEL_SPEED_MAX, self.WHEEL_SPEED_MAX
+            )
+            left_wheel_speed = (left_wheel_speed * right_wheel_speed) / abs(right_wheel_speed)
+
+        self._sim.setJointTargetVelocity(self._motors["left"], left_wheel_speed)
+        self._sim.setJointTargetVelocity(self._motors["right"], right_wheel_speed)
+
     def sense(self) -> tuple[list[float], float, float]:
         """Read the LiDAR and the encoders.
 
@@ -116,5 +122,5 @@ class TurtleBot3Burger(Robot):
         # TODO: 2.3. Solve forward differential kinematics (i.e., calculate z_v and z_w).
         z_v = (velocity_angular_right + velocity_angular_left) * self.WHEEL_RADIUS / 2
         z_w = (velocity_angular_right - velocity_angular_left) * self.WHEEL_RADIUS / self.TRACK
-        
+
         return z_v, z_w
