@@ -5,6 +5,7 @@ class WallFollower:
         self._dt = dt
         self.Kp = 0.6
         self.Kd = 0.07
+        self.Kw = 0.1
         self.setpoint = 0.5
         self.previous_error = 0.0
         self.state = "FOLLOW_WALL"
@@ -25,7 +26,7 @@ class WallFollower:
         if self.state == "FOLLOW_WALL":
             error = left_distance - right_distance
             derivative = (error - self.previous_error) / self._dt
-            w = self.Kp * error + self.Kd * derivative
+            w = self.Kp * error + self.Kd * derivative - self.Kw * z_w
             self.previous_error = error
             v = max(z_v, 0.2)
 
