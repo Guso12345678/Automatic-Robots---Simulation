@@ -101,14 +101,18 @@ class ParticleFilter:
             centroid = largest_cluster.mean(axis=0)
 
             # Compute the average orientation of the particles in the largest cluster
-            orientations = [self._particles[i][2] for i in range(len(self._particles)) if labels[i] == 0]
-            avg_orientation = np.arctan2(np.mean(np.sin(orientations)), np.mean(np.cos(orientations)))
+            orientations = [
+                self._particles[i][2] for i in range(len(self._particles)) if labels[i] == 0
+            ]
+            avg_orientation = np.arctan2(
+                np.mean(np.sin(orientations)), np.mean(np.cos(orientations))
+            )
 
             pose = (centroid[0], centroid[1], avg_orientation)
         else:
             # Reduce the number of particles if there are multiple clusters
             self._particle_count = max(100, self._particle_count // 2)
-            self._particles = self._particles[:self._particle_count]
+            self._particles = self._particles[: self._particle_count]
 
         return localized, pose
 
@@ -137,9 +141,13 @@ class ParticleFilter:
             theta %= 2 * np.pi
 
             if not self._map.contains((x, y)):
-                x, y = self._map.check_collision((particle[0], particle[1]), (x, y))
+                collision_result, _ = self._map.check_collision(
+                    [(particle[0], particle[1]), (x, y)]
+                )
+                if collision_result:
+                    x, y = collision_result
 
-            self._particles[i] = [x, y, theta]
+            self._particles[i] = (x, y, theta)
 
     def resample(self, measurements: list[float]) -> None:
         """Samples a new set of particles.
@@ -149,11 +157,15 @@ class ParticleFilter:
 
         """
         # TODO: 3.9. Complete the function body with your code (i.e., replace the pass statement).
-        weights = np.array([self._measurement_probability(measurements, particle) for particle in self._particles])
-        weights += 1.e-300  
-        weights /= weights.sum()  
+        weights = np.array(
+            [self._measurement_probability(measurements, particle) for particle in self._particles]
+        )
+        weights += 1.0e-300
+        weights /= weights.sum()
 
-        indices = np.random.choice(range(self._particle_count), size=self._particle_count, p=weights)
+        indices = np.random.choice(
+            range(self._particle_count), size=self._particle_count, p=weights
+        )
         self._particles = self._particles[indices]
 
     def plot(self, axes, orientation: bool = True):
@@ -299,7 +311,7 @@ class ParticleFilter:
 
         for ray in rays:
             start, end = ray
-            collision_point = self._map.check_collision(start, end)
+            collision_point, _ = self._map.check_collision(ray)
             if collision_point is not None:
                 distance = math.sqrt(
                     (collision_point[0] - start[0]) ** 2 + (collision_point[1] - start[1]) ** 2

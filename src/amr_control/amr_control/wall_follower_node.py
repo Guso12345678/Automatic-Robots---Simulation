@@ -34,17 +34,13 @@ class WallFollowerNode(LifecycleNode):
             state: Current lifecycle state.
 
         """
-        self.get_logger().info(
-            f"Transitioning from '{state.label}' to 'inactive' state."
-        )
+        self.get_logger().info(f"Transitioning from '{state.label}' to 'inactive' state.")
 
         try:
             # Parameters
             dt = self.get_parameter("dt").get_parameter_value().double_value
             enable_localization = (
-                self.get_parameter("enable_localization")
-                .get_parameter_value()
-                .bool_value
+                self.get_parameter("enable_localization").get_parameter_value().bool_value
             )
 
             # Subscribers
@@ -67,9 +63,9 @@ class WallFollowerNode(LifecycleNode):
                     "/scan",
                     qos_profile=QoSProfile(
                         depth=10,
-                        durability=QoSDurabilityPolicy.RMW_QOS_POLICY_DURABILITY_TRANSIENT_LOCAL,
-                        history=QoSHistoryPolicy.RMW_QOS_POLICY_HISTORY_KEEP_LAST,
-                        reliability=QoSReliabilityPolicy.RMW_QOS_POLICY_RELIABILITY_RELIABLE,
+                        durability=QoSDurabilityPolicy.TRANSIENT_LOCAL,
+                        history=QoSHistoryPolicy.KEEP_LAST,
+                        reliability=QoSReliabilityPolicy.RELIABLE,
                     ),
                 )
             )

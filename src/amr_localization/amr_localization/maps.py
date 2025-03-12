@@ -159,7 +159,7 @@ class Map:
         except IndexError:
             pass  # Sensor rays may be outside the map even if the center of the robot is within it.
 
-        intersection = intersections[index] if intersections else []
+        intersection = intersections[index] if intersections else (float("nan"), float("nan"))
 
         return intersection, distance
 

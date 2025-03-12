@@ -222,7 +222,7 @@ class ParticleFilterNode(LifecycleNode):
             pose_stamped_message = PoseStamped()
             pose_stamped_message.pose.position.x = x_h
             pose_stamped_message.pose.position.y = y_h
-            pose_stamped_message.pose.position.z = 0
+            pose_stamped_message.pose.position.z = 0.0
             pose_stamped_message.pose.orientation.w = quat[0]
             pose_stamped_message.pose.orientation.x = quat[1]
             pose_stamped_message.pose.orientation.y = quat[2]

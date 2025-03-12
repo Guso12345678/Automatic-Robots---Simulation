@@ -40,30 +40,20 @@ class CoppeliaSimNode(LifecycleNode):
             state: Current lifecycle state.
 
         """
-        self.get_logger().info(
-            f"Transitioning from '{state.label}' to 'inactive' state."
-        )
+        self.get_logger().info(f"Transitioning from '{state.label}' to 'inactive' state.")
 
         try:
             # Parameters
             dt = self.get_parameter("dt").get_parameter_value().double_value
             enable_localization = (
-                self.get_parameter("enable_localization")
-                .get_parameter_value()
-                .bool_value
+                self.get_parameter("enable_localization").get_parameter_value().bool_value
             )
             self._goal = tuple(
-                self.get_parameter("goal")
-                .get_parameter_value()
-                .double_array_value.tolist()
+                self.get_parameter("goal").get_parameter_value().double_array_value.tolist()
             )
-            goal_tolerance = (
-                self.get_parameter("goal_tolerance").get_parameter_value().double_value
-            )
+            goal_tolerance = self.get_parameter("goal_tolerance").get_parameter_value().double_value
             start = tuple(
-                self.get_parameter("start")
-                .get_parameter_value()
-                .double_array_value.tolist()
+                self.get_parameter("start").get_parameter_value().double_array_value.tolist()
             )
 
             # Subscribers
@@ -84,9 +74,7 @@ class CoppeliaSimNode(LifecycleNode):
                 )
                 self._subscribers.append(self._velocity_subscriber)
 
-                self._pose_subscriber = message_filters.Subscriber(
-                    self, PoseStamped, "/pose"
-                )
+                self._pose_subscriber = message_filters.Subscriber(self, PoseStamped, "/pose")
                 self._subscribers.append(self._pose_subscriber)
 
                 ts = message_filters.ApproximateTimeSynchronizer(
@@ -102,9 +90,9 @@ class CoppeliaSimNode(LifecycleNode):
                 "/scan",
                 QoSProfile(
                     depth=10,
-                    durability=QoSDurabilityPolicy.RMW_QOS_POLICY_DURABILITY_TRANSIENT_LOCAL,
-                    history=QoSHistoryPolicy.RMW_QOS_POLICY_HISTORY_KEEP_LAST,
-                    reliability=QoSReliabilityPolicy.RMW_QOS_POLICY_RELIABILITY_RELIABLE,
+                    durability=QoSDurabilityPolicy.TRANSIENT_LOCAL,
+                    history=QoSHistoryPolicy.KEEP_LAST,
+                    reliability=QoSReliabilityPolicy.RELIABLE,
                 ),
             )
 
@@ -145,9 +133,7 @@ class CoppeliaSimNode(LifecycleNode):
         except AttributeError:
             pass
 
-    def _next_step_callback(
-        self, cmd_vel_msg: TwistStamped, pose_msg: PoseStamped = PoseStamped()
-    ):
+    def _next_step_callback(self, cmd_vel_msg: TwistStamped, pose_msg: PoseStamped = PoseStamped()):
         """Subscriber callback. Executes a simulation step and publishes the new measurements.
 
         Args:
@@ -201,9 +187,7 @@ class CoppeliaSimNode(LifecycleNode):
             th_h %= 2 * math.pi
             th_h_deg = math.degrees(th_h)
 
-            real_pose, position_error, within_tolerance = (
-                self._coppeliasim.check_position(x_h, y_h)
-            )
+            real_pose, position_error, within_tolerance = self._coppeliasim.check_position(x_h, y_h)
             x, y, th = real_pose
             th %= 2 * math.pi
             th_deg = math.degrees(th)
@@ -234,22 +218,16 @@ class CoppeliaSimNode(LifecycleNode):
         goal_found = False
 
         if self._localized:
-            _, _, goal_found = self._coppeliasim.check_position(
-                self._goal[0], self._goal[1]
-            )
+            _, _, goal_found = self._coppeliasim.check_position(self._goal[0], self._goal[1])
 
             if goal_found:
                 self.get_logger().warn("Congratulations, you reached the goal!")
-                execution_time, simulated_time, steps = (
-                    self._coppeliasim.stop_simulation()
-                )
+                execution_time, simulated_time, steps = self._coppeliasim.stop_simulation()
                 self._print_statistics(execution_time, simulated_time, steps)
 
         return goal_found
 
-    def _print_statistics(
-        self, execution_time: float, simulated_time: float, steps: int
-    ) -> None:
+    def _print_statistics(self, execution_time: float, simulated_time: float, steps: int) -> None:
         """Outputs a ROS log message to the Terminal with a summary of timing statistics.
 
         Args:
