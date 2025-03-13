@@ -67,20 +67,20 @@ class CoppeliaSimNode(LifecycleNode):
                 )
 
             # TODO: 3.3. Sync the /pose and /cmd_vel subscribers if enable_localization is True.
-            if enable_localization:
+            else:
                 self._subscribers = []
                 self._velocity_subscriber = message_filters.Subscriber(
-                    self, TwistStamped, "/cmd_vel"
+                    self, TwistStamped, "/cmd_vel",qos_profile=10
                 )
                 self._subscribers.append(self._velocity_subscriber)
 
-                self._pose_subscriber = message_filters.Subscriber(self, PoseStamped, "/pose")
+                self._pose_subscriber = message_filters.Subscriber(self, PoseStamped, "/pose", qos_profile=10)
                 self._subscribers.append(self._pose_subscriber)
 
-                ts = message_filters.ApproximateTimeSynchronizer(
-                    self._subscribers, queue_size=10, slop=9
+                self._synchronizer = message_filters.ApproximateTimeSynchronizer(
+                    self._subscribers, 10, 20
                 )
-                ts.registerCallback(self._next_step_callback)
+                self._synchronizer.registerCallback(self._next_step_callback)
 
             # Publishers
             # TODO: 2.4. Create the /odometry (Odometry message) and /scan (LaserScan) publishers.

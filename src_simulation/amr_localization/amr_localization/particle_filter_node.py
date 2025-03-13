@@ -120,7 +120,7 @@ class ParticleFilterNode(LifecycleNode):
             self._subscribers.append(self._scan_subscriber)
 
             self.ts = message_filters.ApproximateTimeSynchronizer(
-                self._subscribers, queue_size=10, slop=9, allow_headerless=True
+                self._subscribers, queue_size=10, slop=100, allow_headerless=True
             )
             self.ts.registerCallback(self._compute_pose_callback)
 
@@ -149,15 +149,21 @@ class ParticleFilterNode(LifecycleNode):
             scan_msg: Message containing LiDAR sensor readings.
 
         """
+        self.get_logger().info("Received odometry and scan messages")
+
         # Parse measurements
         z_v: float = odom_msg.twist.twist.linear.x
         z_w: float = odom_msg.twist.twist.angular.z
         z_scan: list[float] = scan_msg.ranges
 
+        self.get_logger().info(f"Linear velocity: {z_v}, Angular velocity: {z_w}")
+
         # Execute particle filter
         self._execute_motion_step(z_v, z_w)
         x_h, y_h, theta_h = self._execute_measurement_step(z_scan)
         self._steps += 1
+
+        self.get_logger().info(f"Pose estimate: x = {x_h}, y = {y_h}, theta = {theta_h}")
 
         # Publish
         self._publish_pose_estimate(x_h, y_h, theta_h)
@@ -217,17 +223,23 @@ class ParticleFilterNode(LifecycleNode):
 
         """
         # TODO: 3.2. Complete the function body with your code (i.e., replace the pass statement).
+        pose_msg = PoseStamped()
+        pose_msg.header.stamp = self.get_clock().now().to_msg()
+        pose_msg.header.frame_id = "map"
+        pose_msg.localized = self._localized
+        
         if self._localized:
-            quat = euler2quat(0, 0, theta_h)
-            pose_stamped_message = PoseStamped()
-            pose_stamped_message.pose.position.x = x_h
-            pose_stamped_message.pose.position.y = y_h
-            pose_stamped_message.pose.position.z = 0.0
-            pose_stamped_message.pose.orientation.w = quat[0]
-            pose_stamped_message.pose.orientation.x = quat[1]
-            pose_stamped_message.pose.orientation.y = quat[2]
-            pose_stamped_message.pose.orientation.z = quat[3]
-            self._pose_publisher.publish(pose_stamped_message)
+            pose_msg.pose.position.x = x_h
+            pose_msg.pose.position.y = y_h
+            pose_msg.pose.position.z = 0.0
+            
+            qx, qy, qz, qw = euler2quat(0, 0, theta_h)
+            pose_msg.pose.orientation.x = qx
+            pose_msg.pose.orientation.y = qy
+            pose_msg.pose.orientation.z = qz
+            pose_msg.pose.orientation.w = qw
+            
+        self._pose_publisher.publish(pose_msg)
 
 
 def main(args=None):

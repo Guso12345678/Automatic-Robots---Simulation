@@ -79,40 +79,48 @@ class ParticleFilter:
             pose: Robot pose estimate (x, y, theta) [m, m, rad].
 
         """
-        # TODO: 3.10. Complete the missing function body with your code.
         localized: bool = False
-        pose: tuple[float, float, float] = (float("inf"), float("inf"), float("inf"))
+        pose: tuple[float, float, float] = (float('inf'), float('inf'), float('inf'))
+        if len(self._particles) == 0:
+             return localized, pose
 
         # Extract particle positions
         positions = np.array([[p[0], p[1]] for p in self._particles])
 
         # Perform DBSCAN clustering
-        clustering = DBSCAN(eps=0.5, min_samples=5).fit(positions)
+        clustering = DBSCAN(eps=0.1, min_samples=10, algorithm="kd_tree", n_jobs=-1).fit(positions)
         labels = clustering.labels_
 
         # Count the number of clusters
         unique_labels = set(labels)
-        num_clusters = len(unique_labels) - (1 if -1 in labels else 0)
+        unique_labels.discard(-1)
+        num_clusters = len(unique_labels)
+
+        # self.get_logger().info(f"Number of clusters: {num_clusters}")
 
         if num_clusters == 1:
             localized = True
             # Compute the centroid of the largest cluster
-            largest_cluster = positions[labels == 0]
-            centroid = largest_cluster.mean(axis=0)
+            # Obtener partículas del cluster principal
+            main_cluster = self._particles[labels == list(unique_labels)[0]]
 
-            # Compute the average orientation of the particles in the largest cluster
-            orientations = [
-                self._particles[i][2] for i in range(len(self._particles)) if labels[i] == 0
-            ]
-            avg_orientation = np.arctan2(
-                np.mean(np.sin(orientations)), np.mean(np.cos(orientations))
-            )
+            # Calcular centroide del cluster
+            x_mean = np.mean(main_cluster[:, 0])
+            y_mean = np.mean(main_cluster[:, 1])
 
-            pose = (centroid[0], centroid[1], avg_orientation)
-        else:
-            # Reduce the number of particles if there are multiple clusters
-            self._particle_count = max(100, self._particle_count // 2)
-            self._particles = self._particles[: self._particle_count]
+            # thetas = np.array([p[2] for p in main_cluster])
+            theta_mean = np.mean(main_cluster[:,2])  # Promedio directo de los ángulos
+
+            # Asegurar que el ángulo esté en el rango [0, 2π]
+            if theta_mean < 0:
+                theta_mean += 2 * np.pi
+            elif theta_mean >= 2 * np.pi:
+                theta_mean -= 2 * np.pi
+
+            pose = (x_mean, y_mean, theta_mean)
+
+            # Reducimos el número de partículas para mejorar eficiencia
+            self._particles = main_cluster[np.random.choice(len(main_cluster), 100, replace=True)]
 
         return localized, pose
 
@@ -157,16 +165,18 @@ class ParticleFilter:
 
         """
         # TODO: 3.9. Complete the function body with your code (i.e., replace the pass statement).
-        weights = np.array(
-            [self._measurement_probability(measurements, particle) for particle in self._particles]
-        )
-        weights += 1.0e-300
-        weights /= weights.sum()
+        weights = np.array([self._measurement_probability(measurements, particle) for particle in self._particles])
+        weights /= np.sum(weights)
+        N = len(self._particles)
+        u1 = np.random.uniform(0, 1/N)
+        indexes = np.zeros(N, dtype=int)
+        cumulative_sum = np.cumsum(weights)
+        for k in range(1, N):
+            u = u1 + (k - 1) / N
+            indexes[k - 1] = np.searchsorted(cumulative_sum, u)
 
-        indices = np.random.choice(
-            range(self._particle_count), size=self._particle_count, p=weights
-        )
-        self._particles = self._particles[indices]
+        self._particles = self._particles[indexes]
+        print(len(self._particles))
 
     def plot(self, axes, orientation: bool = True):
         """Draws particles.
@@ -305,14 +315,15 @@ class ParticleFilter:
         z_hat: list[float] = []
 
         # TODO: 3.6. Complete the missing function body with your code.
-        rays = self._lidar_rays(particle, range(0, 240, 30))  # 8 rays
+        rango = range(0, 240, 30)
+        rays = self._lidar_rays(particle, rango)
+
         for ray in rays:
-            intersection, distance = self._map.check_collision(ray, True)
-            if intersection:
+            collision_point, distance = self._map.check_collision(ray,True)
+            if collision_point :
                 z_hat.append(distance)
             else:
                 z_hat.append(float("nan"))
-
         return z_hat
 
     @staticmethod
@@ -382,14 +393,54 @@ class ParticleFilter:
 
         """
         probability = 1.0
-
-        # TODO: 3.8. Complete the missing function body with your code.
         predicted_measurements = self._sense(particle)
-        for z, z_hat in zip(measurements[::30], predicted_measurements):
+        indexed_measurements = measurements[::30]
+        if len(indexed_measurements) != len(predicted_measurements):
+            raise ValueError("The length of indexed measurements and predicted measurements must be the same.")
+
+        for z, z_hat in zip(indexed_measurements, predicted_measurements):
             if math.isnan(z):
                 z = self._sensor_range_min
             if math.isnan(z_hat):
                 z_hat = self._sensor_range_min
-            probability = self._gaussian(z, self._sigma_z, z_hat)
+
+            prob = self._gaussian(z, self._sigma_z, z_hat)
+            probability *= prob
 
         return probability
+
+
+    # def _measurement_probability(
+    #     self, measurements: list[float], particle: tuple[float, float, float]
+    # ) -> float:
+    #     """Computes the probability of a set of measurements given a particle's pose.
+
+    #     If a measurement is unavailable (usually because it is out of range), it is replaced with
+    #     the minimum sensor range to perform the computation because the environment is smaller
+    #     than the maximum range.
+
+    #     Args:
+    #         measurements: Sensor measurements [m].
+    #         particle: Particle pose (x, y, theta) [m, m, rad].
+
+    #     Returns:
+    #         float: Probability.
+
+    #     """
+    #     probability = 1.0
+
+    #     # Obtain predicted measurements for the particle
+    #     predicted_measurements = self._sense(particle)
+
+    #     # Iterate over the actual and predicted measurements
+    #     for z, z_hat in zip(measurements[::30], predicted_measurements):
+    #         # Replace NaN values with the minimum sensor range
+    #         if math.isnan(z):
+    #             z = self._sensor_range_min
+    #         if math.isnan(z_hat):
+    #             z_hat = self._sensor_range_min
+
+    #         # Compute the probability using the Gaussian function
+    #         probability *= self._gaussian(z_hat, self._sigma_z, z)
+
+    #     return probability
