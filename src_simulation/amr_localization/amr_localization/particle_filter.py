@@ -79,10 +79,11 @@ class ParticleFilter:
             pose: Robot pose estimate (x, y, theta) [m, m, rad].
 
         """
+        # TODO: 3.10. Complete the missing function body with your code.
         localized: bool = False
-        pose: tuple[float, float, float] = (float('inf'), float('inf'), float('inf'))
+        pose: tuple[float, float, float] = (float("inf"), float("inf"), float("inf"))
         if len(self._particles) == 0:
-             return localized, pose
+            return localized, pose
 
         # Extract particle positions
         positions = np.array([[p[0], p[1]] for p in self._particles])
@@ -109,7 +110,7 @@ class ParticleFilter:
             y_mean = np.mean(main_cluster[:, 1])
 
             # thetas = np.array([p[2] for p in main_cluster])
-            theta_mean = np.mean(main_cluster[:,2])  # Promedio directo de los ángulos
+            theta_mean = np.mean(main_cluster[:, 2])  # Promedio directo de los ángulos
 
             # Asegurar que el ángulo esté en el rango [0, 2π]
             if theta_mean < 0:
@@ -165,10 +166,12 @@ class ParticleFilter:
 
         """
         # TODO: 3.9. Complete the function body with your code (i.e., replace the pass statement).
-        weights = np.array([self._measurement_probability(measurements, particle) for particle in self._particles])
+        weights = np.array(
+            [self._measurement_probability(measurements, particle) for particle in self._particles]
+        )
         weights /= np.sum(weights)
         N = len(self._particles)
-        u1 = np.random.uniform(0, 1/N)
+        u1 = np.random.uniform(0, 1 / N)
         indexes = np.zeros(N, dtype=int)
         cumulative_sum = np.cumsum(weights)
         for k in range(1, N):
@@ -319,8 +322,8 @@ class ParticleFilter:
         rays = self._lidar_rays(particle, rango)
 
         for ray in rays:
-            collision_point, distance = self._map.check_collision(ray,True)
-            if collision_point :
+            collision_point, distance = self._map.check_collision(ray, True)
+            if collision_point:
                 z_hat.append(distance)
             else:
                 z_hat.append(float("nan"))
@@ -392,11 +395,14 @@ class ParticleFilter:
             float: Probability.
 
         """
+        # TODO. 3.8. Complete the function body with your code.
         probability = 1.0
         predicted_measurements = self._sense(particle)
         indexed_measurements = measurements[::30]
         if len(indexed_measurements) != len(predicted_measurements):
-            raise ValueError("The length of indexed measurements and predicted measurements must be the same.")
+            raise ValueError(
+                "The length of indexed measurements and predicted measurements must be the same."
+            )
 
         for z, z_hat in zip(indexed_measurements, predicted_measurements):
             if math.isnan(z):
@@ -408,39 +414,3 @@ class ParticleFilter:
             probability *= prob
 
         return probability
-
-
-    # def _measurement_probability(
-    #     self, measurements: list[float], particle: tuple[float, float, float]
-    # ) -> float:
-    #     """Computes the probability of a set of measurements given a particle's pose.
-
-    #     If a measurement is unavailable (usually because it is out of range), it is replaced with
-    #     the minimum sensor range to perform the computation because the environment is smaller
-    #     than the maximum range.
-
-    #     Args:
-    #         measurements: Sensor measurements [m].
-    #         particle: Particle pose (x, y, theta) [m, m, rad].
-
-    #     Returns:
-    #         float: Probability.
-
-    #     """
-    #     probability = 1.0
-
-    #     # Obtain predicted measurements for the particle
-    #     predicted_measurements = self._sense(particle)
-
-    #     # Iterate over the actual and predicted measurements
-    #     for z, z_hat in zip(measurements[::30], predicted_measurements):
-    #         # Replace NaN values with the minimum sensor range
-    #         if math.isnan(z):
-    #             z = self._sensor_range_min
-    #         if math.isnan(z_hat):
-    #             z_hat = self._sensor_range_min
-
-    #         # Compute the probability using the Gaussian function
-    #         probability *= self._gaussian(z_hat, self._sigma_z, z)
-
-    #     return probability

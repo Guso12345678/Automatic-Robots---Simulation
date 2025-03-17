@@ -37,6 +37,7 @@ class WallFollowerNode(LifecycleNode):
         self.get_logger().info(f"Transitioning from '{state.label}' to 'inactive' state.")
 
         try:
+            # TODO: 2.7. Synchronize _compute_commands_callback with /odometry and /scan.
             # Parameters
             dt = self.get_parameter("dt").get_parameter_value().double_value
             enable_localization = (
@@ -68,12 +69,24 @@ class WallFollowerNode(LifecycleNode):
                 )
             )
 
+            # TODO: 4.12. Add the /pose subscriber to the list of subscribers if enable_localization is True.
+            if enable_localization:
+                self._subscribers.append(
+                    message_filters.Subscriber(
+                        self,
+                        PoseStamped,
+                        "/pose",
+                        qos_profile=10,
+                    )
+                )
+
             self.ts = message_filters.ApproximateTimeSynchronizer(
                 self._subscribers, queue_size=10, slop=9
             )
 
             self.ts.registerCallback(self._compute_commands_callback)
-
+            
+            # TODO: 2.10. Create the /cmd_vel velocity commands publisher (TwistStamped message).
             # Publishers
             self._velocity_publisher = self.create_publisher(
                 TwistStamped, "/cmd_vel", qos_profile=10
@@ -116,8 +129,11 @@ class WallFollowerNode(LifecycleNode):
 
         """
         if not pose_msg.localized:
+            # TODO: 2.8. Parse the odometry from the Odometry message (i.e., read z_v and z_w).
             z_v: float = odom_msg.twist.twist.linear.x
             z_w: float = odom_msg.twist.twist.angular.z
+
+            # TODO: 2.9. Parse LiDAR measurements from the LaserScan message (i.e., read z_scan).
             z_scan: list[float] = scan_msg.ranges
 
             # Execute wall follower
@@ -135,6 +151,7 @@ class WallFollowerNode(LifecycleNode):
             w: Angular velocity command [rad/s].
 
         """
+        # TODO: 2.11. Complete the function body with your code (i.e., replace the pass statement).
         twistStamped_msg = TwistStamped()
         twistStamped_msg.header.stamp = self.get_clock().now().to_msg()
         twistStamped_msg.twist.linear.x = v
