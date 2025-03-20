@@ -62,7 +62,9 @@ class PurePursuit:
         """Path setter."""
         self._path = value
 
-    def _find_closest_point(self, x: float, y: float) -> tuple[tuple[float, float], int]:
+    def _find_closest_point(
+        self, x: float, y: float
+    ) -> tuple[tuple[float, float], int]:
         """Find the closest path point to the current robot pose.
 
         Args:
@@ -103,5 +105,15 @@ class PurePursuit:
         """
         # TODO: 4.10. Complete the function body with your code (i.e., determine target_xy).
         target_xy = (0.0, 0.0)
+        initial_diff = np.float("inf")
+
+        for idx, (x, y) in enumerate(self.path):
+            if idx > origin_idx:
+                dist = np.sqrt((x - origin_xy[0]) ** 2 + (y - origin_xy[1]) ** 2)
+                diff = dist - self._lookahead_distance
+
+                if diff <= initial_diff:
+                    target_xy = (x, y)
+                    initial_diff = diff
 
         return target_xy
