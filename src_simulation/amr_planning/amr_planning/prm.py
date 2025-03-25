@@ -82,41 +82,37 @@ class PRM:
         ancestors: dict[tuple[float, float], tuple[float, float]] = {}  # {(x, y: (x_prev, y_prev)}
 
         # TODO: 4.3. Complete the function body (i.e., replace the code below).
-        path: list[tuple[float, float]] = []
+        if not self._map.contains(start) or not self._map.contains(goal):
+            raise ValueError("Start or goal location is outside the accessible area.")
 
-        start_node = min(
-            self._graph.keys(),
-            key=lambda node: np.linalg.norm(np.array(node) - np.array(start)),
-        )
-        goal_node = min(
-            self._graph.keys(),
-            key=lambda node: np.linalg.norm(np.array(node) - np.array(goal)),
-        )
+        # Initialize start and goal nodes
+        start_node = min(self._graph.keys(), key=lambda node: np.hypot(node[0] - start[0], node[1] - start[1]))
+        goal_node = min(self._graph.keys(), key=lambda node: np.hypot(node[0] - goal[0], node[1] - goal[1]))
 
-        open_list = {start_node: (0, 0)}
+        open_list = {start_node: (0, 0)}  # node: (f, g)
         closed_list = set()
-        ancestors = {}
+        ancestors[start_node] = None
 
         while open_list:
-            current_node = min(open_list, key=lambda k: open_list[k][0])
-            f, g = open_list[current_node]
+            current_node, (f, g) = min(open_list.items(), key=lambda item: item[1][0])
             del open_list[current_node]
             closed_list.add(current_node)
 
+            if current_node == goal_node:
+                return self._reconstruct_path(start_node, goal_node, ancestors)
+
             for neighbor in self._graph[current_node]:
-                if (
-                    self._map.contains(neighbor)
-                    and neighbor not in open_list
-                    and neighbor not in closed_list
-                ):
-                    tentative_g = g + np.linalg.norm(np.array(current_node) - np.array(neighbor))
-                    tentative_f = tentative_g + np.linalg.norm(np.array(neighbor) - np.array(goal))
+                if neighbor in closed_list or not self._map.contains(neighbor):
+                    continue
+
+                tentative_g = g + np.linalg.norm(np.array(current_node) - np.array(neighbor))
+                tentative_f = tentative_g + np.linalg.norm(np.array(neighbor) - np.array(goal))
+
+                if neighbor not in open_list or open_list[neighbor][1] > tentative_g:
                     open_list[neighbor] = (tentative_f, tentative_g)
                     ancestors[neighbor] = current_node
 
-                    if neighbor == goal_node:
-                        path = self._reconstruct_path(start_node, goal_node, ancestors)
-                        return path
+        raise Exception("Path not found")
 
     @staticmethod
     def smooth_path(

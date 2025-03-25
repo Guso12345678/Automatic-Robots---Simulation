@@ -69,7 +69,7 @@ def generate_launch_description():
         namespace="",
         output="screen",
         arguments=["--ros-args", "--log-level", "WARN"],
-        parameters=[{"lookahead_distance": 0.3}],
+        parameters=[{"lookahead_distance": 0.2}],
     )
 
     coppeliasim_node = LifecycleNode(

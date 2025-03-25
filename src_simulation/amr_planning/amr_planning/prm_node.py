@@ -178,8 +178,10 @@ class PRMNode(LifecycleNode):
         # TODO: 4.7. Complete the function body with your code (i.e., replace the pass statement).
         path_message = Path()
         for i in range(len(path)):
-            path_message.poses[i].pose.position.x = path[i][0]
-            path_message.poses[i].pose.position.y = path[i][1]
+            pose = PoseStamped()
+            pose.pose.position.x = path[i][0]
+            pose.pose.position.y = path[i][1]
+            path_message.poses.append(pose)
 
         self.path_publisher.publish(path_message)
 

@@ -114,8 +114,10 @@ class PurePursuitNode(LifecycleNode):
         """
         msg = TwistStamped()
         msg.header.stamp = self.get_clock().now().to_msg()
+        msg.header.frame_id = "base_link"
         msg.twist.linear.x = v
         msg.twist.angular.z = w
+        #para el robot real - 
         self._publisher.publish(msg)
 
 

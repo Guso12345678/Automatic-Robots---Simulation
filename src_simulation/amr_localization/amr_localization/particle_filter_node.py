@@ -25,14 +25,14 @@ class ParticleFilterNode(LifecycleNode):
         self.declare_parameter("dt", 0.05)
         self.declare_parameter("enable_plot", False)
         self.declare_parameter("global_localization", True)
-        self.declare_parameter("initial_pose", (0.0, 0.0, math.radians(0)))
-        self.declare_parameter("initial_pose_sigma", (0.05, 0.05, math.radians(5)))
+        self.declare_parameter("initial_pose", (0.0, 0.0, math.pi/2))
+        self.declare_parameter("initial_pose_sigma", (0.05, 0.05, math.radians(10)))
         self.declare_parameter("particles", 1000)
         self.declare_parameter("sigma_v", 0.1)
         self.declare_parameter("sigma_w", 0.1)
         self.declare_parameter("sigma_z", 0.1)
         self.declare_parameter("steps_btw_sense_updates", 10)
-        self.declare_parameter("world", "lab03")
+        self.declare_parameter("world", "project")
 
     def on_configure(self, state: LifecycleState) -> TransitionCallbackReturn:
         """Handles a configuring transition.
@@ -233,7 +233,7 @@ class ParticleFilterNode(LifecycleNode):
             pose_msg.pose.position.y = y_h
             pose_msg.pose.position.z = 0.0
             
-            qx, qy, qz, qw = euler2quat(0, 0, theta_h)
+            qw, qx, qy, qz = euler2quat(0, 0, theta_h)
             pose_msg.pose.orientation.x = qx
             pose_msg.pose.orientation.y = qy
             pose_msg.pose.orientation.z = qz

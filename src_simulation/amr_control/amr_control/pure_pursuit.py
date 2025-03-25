@@ -4,7 +4,7 @@ import numpy as np
 class PurePursuit:
     """Class to follow a path using a simple pure pursuit controller."""
 
-    def __init__(self, dt: float, lookahead_distance: float = 0.5):
+    def __init__(self, dt: float, lookahead_distance: float = 0.2):
         """Pure pursuit class initializer.
 
         Args:
@@ -41,14 +41,13 @@ class PurePursuit:
 
         dx = target_xy[0] - x
         dy = target_xy[1] - y
+        L = np.hypot(dx, dy)
+    
         beta = np.arctan2(dy, dx)
         alpha = beta - theta
-        L = np.hypot(dx, dy)
-
-        gamma = 2 * np.sin(alpha) / L
-
-        v = 1.0
-        w = v * gamma
+        
+        v = 0.15
+        w = 2 * v * np.sin(alpha) / L
 
         return v, w
 
@@ -79,14 +78,17 @@ class PurePursuit:
         # TODO: 4.9. Complete the function body (i.e., find closest_xy and closest_idx).
         closest_xy = (0.0, 0.0)
         closest_idx = 0
+        min_distance = np.inf 
 
-        smaller_distance = 0.0
         for idx, (pos_x, pos_y) in enumerate(self._path):
-            distance = np.sqrt((x - pos_x) * 2 + (y - pos_y) * 2)
-            if distance < smaller_distance:
+            distance_squared = (x - pos_x) ** 2 + (y - pos_y) ** 2
+            
+            if distance_squared < min_distance:
                 closest_idx = idx
                 closest_xy = (pos_x, pos_y)
-                smaller_distance = distance
+                min_distance = distance_squared
+
+        min_distance = np.sqrt(min_distance)
 
         return closest_xy, closest_idx
 
@@ -104,16 +106,20 @@ class PurePursuit:
 
         """
         # TODO: 4.10. Complete the function body with your code (i.e., determine target_xy).
-        target_xy = (0.0, 0.0)
-        initial_diff = np.float("inf")
+        cumulative_dist = 0.0
+        prev_x, prev_y = origin_xy
 
-        for idx, (x, y) in enumerate(self.path):
-            if idx > origin_idx:
-                dist = np.sqrt((x - origin_xy[0]) ** 2 + (y - origin_xy[1]) ** 2)
-                diff = dist - self._lookahead_distance
+        for idx in range(origin_idx, len(self._path)):
+            x, y = self._path[idx]
+            segment_dist = np.hypot(x - prev_x, y - prev_y)
+            cumulative_dist += segment_dist
 
-                if diff <= initial_diff:
-                    target_xy = (x, y)
-                    initial_diff = diff
+            if cumulative_dist >= self._lookahead_distance:
+                overshoot = cumulative_dist - self._lookahead_distance
+                fraction = 1.0 - (overshoot / segment_dist)
+                interp_x = prev_x + fraction * (x - prev_x)
+                interp_y = prev_y + fraction * (y - prev_y)
+                return (interp_x, interp_y)
 
-        return target_xy
+            prev_x, prev_y = x, y
+        return self._path[-1]
