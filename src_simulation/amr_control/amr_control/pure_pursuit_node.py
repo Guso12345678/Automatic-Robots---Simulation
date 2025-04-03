@@ -1,7 +1,7 @@
 import rclpy
 from rclpy.lifecycle import LifecycleNode, LifecycleState, TransitionCallbackReturn
 
-from amr_msgs.msg import PoseStamped
+from amr_msgs.msg import PoseStamped, Move
 from geometry_msgs.msg import TwistStamped
 from nav_msgs.msg import Path
 
@@ -20,6 +20,7 @@ class PurePursuitNode(LifecycleNode):
         # Parameters
         self.declare_parameter("dt", 0.05)
         self.declare_parameter("lookahead_distance", 0.2)
+        self._stop = False
 
     def on_configure(self, state: LifecycleState) -> TransitionCallbackReturn:
         """Handles a configuring transition.
@@ -42,7 +43,8 @@ class PurePursuitNode(LifecycleNode):
                 PoseStamped, "pose", self._compute_commands_callback, 10
             )
             self._subscriber_path = self.create_subscription(Path, "path", self._path_callback, 10)
-
+            self._subscriber_move = self.create_subscription(Move, "move", self._move_callback, 10)
+    
             # Publishers
             self._publisher = self.create_publisher(TwistStamped, "cmd_vel", 10)
 
@@ -65,6 +67,20 @@ class PurePursuitNode(LifecycleNode):
         self.get_logger().info(f"Transitioning from '{state.label}' to 'active' state.")
 
         return super().on_activate(state)
+    
+    def _move_callback(self, move_msg: Move):
+        """Subscriber callback. Stops the robot when a move message is received.
+
+        Args:
+            move_msg: Message containing the robot move command.
+
+        """
+        self.get_logger().info(f"Move command received: {move_msg.move}")
+        if not move_msg.move:
+            self._stop = True
+            self._publish_velocity_commands(0.0, 0.0)
+        else:
+            self._stop = False
 
     def _compute_commands_callback(self, pose_msg: PoseStamped):
         """Subscriber callback. Executes a pure pursuit controller and publishes v and w commands.
@@ -75,7 +91,7 @@ class PurePursuitNode(LifecycleNode):
             pose_msg: Message containing the estimated robot pose.
 
         """
-        if pose_msg.localized:
+        if pose_msg.localized and not self._stop:
             # Parse pose
             x = pose_msg.pose.position.x
             y = pose_msg.pose.position.y
@@ -88,7 +104,6 @@ class PurePursuitNode(LifecycleNode):
 
             # Execute pure pursuit
             v, w = self._pure_pursuit.compute_commands(x, y, theta)
-            self.get_logger().info(f"Commands: v = {v:.3f} m/s, w = {w:+.3f} rad/s")
 
             # Publish
             self._publish_velocity_commands(v, w)
@@ -113,12 +128,12 @@ class PurePursuitNode(LifecycleNode):
 
         """
         msg = TwistStamped()
-        msg.header.stamp = self.get_clock().now().to_msg()
-        msg.header.frame_id = "base_link"
+        msg.header.stamp = self.get_clock().now().to_msg()  # discard from real
+        msg.header.frame_id = "base_link"   # discard from real
         msg.twist.linear.x = v
-        msg.twist.angular.z = w
-        #para el robot real - 
+        msg.twist.angular.z = w # negative sign to match the ROS2 convention
         self._publisher.publish(msg)
+        # self.get_logger().info(f"Published velocity command: v = {v:.3f} m/s, w = {w:+.3f} rad/s")
 
 
 def main(args=None):

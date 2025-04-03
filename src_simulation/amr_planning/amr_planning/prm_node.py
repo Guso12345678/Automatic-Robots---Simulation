@@ -112,7 +112,7 @@ class PRMNode(LifecycleNode):
 
             # Subscribers
             self._subscriber_pose = self.create_subscription(
-                AmrPoseStamped, "pose", self._path_callback, 10
+                AmrPoseStamped, "/pose", self._path_callback, 10
             )
 
         except Exception:

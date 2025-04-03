@@ -160,8 +160,8 @@ class CoppeliaSimNode(LifecycleNode):
             return
 
         # Publish
-        self._publish_odometry(z_v, z_w)
         self._publish_scan(z_scan)
+        self._publish_odometry(z_v, z_w)
 
     def _check_estimated_pose(self, pose_msg: PoseStamped = PoseStamped()) -> None:
         """If the robot is localized, compares the estimated and real poses.
