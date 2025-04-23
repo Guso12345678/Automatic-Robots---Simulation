@@ -55,3 +55,4 @@ class WallFollower:
                 return 0.0, 0.0
 
         return z_v, 0.0
+

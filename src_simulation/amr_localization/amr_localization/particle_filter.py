@@ -5,6 +5,7 @@ import os
 import pytz
 import random
 
+
 from amr_localization.maps import Map
 from matplotlib import pyplot as plt
 from sklearn.cluster import DBSCAN
@@ -74,7 +75,7 @@ class ParticleFilter:
         Adapts the amount of particles depending on the number of clusters during localization.
         100 particles are kept for pose tracking.
 
-        
+
         Returns:
             localized: True if the pose estimate is valid.
             pose: Robot pose estimate (x, y, theta) [m, m, rad].
@@ -82,20 +83,23 @@ class ParticleFilter:
         """
         localized: bool = False
         pose: tuple[float, float, float] = (float("inf"), float("inf"), float("inf"))
-        
+
+        # TODO: 3.10. Complete the body function with your code.
+
         if len(self._particles) == 0:
             return localized, pose
 
         particle_positions = np.array([[p[0], p[1]] for p in self._particles])
         valid_mask = ~np.isnan(particle_positions).any(axis=1)
         if not np.any(valid_mask):
-            return localized, pose  
+            return localized, pose
 
         particle_positions = particle_positions[valid_mask]
         valid_particles = self._particles[valid_mask]
 
-
-        clustering = DBSCAN(eps=0.1, min_samples=10, algorithm='kd_tree', n_jobs = -1).fit(particle_positions)
+        clustering = DBSCAN(eps=0.1, min_samples=10, algorithm="kd_tree", n_jobs=-1).fit(
+            particle_positions
+        )
         labels = clustering.labels_
         unique_labels = set(labels)
         unique_labels.discard(-1)
@@ -113,8 +117,8 @@ class ParticleFilter:
             self._particles = main_cluster[np.random.choice(len(main_cluster), 100, replace=True)]
         return localized, pose
 
-
     def move(self, v: float, w: float) -> None:
+        # TODO: 3.5. Complete te body function wit your code.
         self._iteration += 1
         for i, particle in enumerate(self._particles):
             x, y, theta = particle
@@ -156,7 +160,7 @@ class ParticleFilter:
             [self._measurement_probability(measurements, particle) for particle in self._particles]
         )
         weights /= np.sum(weights)
-        N = len(self._particles)
+        N = max(1, len(self._particles))
         u1 = np.random.uniform(0, 1 / N)
         indexes = np.zeros(N, dtype=int)
         cumulative_sum = np.cumsum(weights)
@@ -165,6 +169,7 @@ class ParticleFilter:
             indexes[k - 1] = np.searchsorted(cumulative_sum, u)
 
         self._particles = self._particles[indexes]
+        
 
     def plot(self, axes, orientation: bool = True):
         """Draws particles.
@@ -242,56 +247,55 @@ class ParticleFilter:
             figure.savefig(file_path)
 
     def _init_particles(
-            self,
-            particle_count: int,
-            global_localization: bool,
-            initial_pose: tuple[float, float, float],
-            initial_pose_sigma: tuple[float, float, float],
-        ) -> np.ndarray:
-            """Draws N random valid particles more efficiently.
+        self,
+        particle_count: int,
+        global_localization: bool,
+        initial_pose: tuple[float, float, float],
+        initial_pose_sigma: tuple[float, float, float],
+    ) -> np.ndarray:
+        """Draws N random valid particles more efficiently.
 
-            The particles are guaranteed to be inside the map and
-            can only have the following orientations [0, pi/2, pi, 3*pi/2].
+        The particles are guaranteed to be inside the map and
+        can only have the following orientations [0, pi/2, pi, 3*pi/2].
 
-            Args:
-                particle_count: Number of particles.
-                global_localization: First localization if True, pose tracking otherwise.
-                initial_pose: Approximate initial robot pose (x, y, theta) for tracking [m, m, rad].
-                initial_pose_sigma: Standard deviation of the initial pose guess [m, m, rad].
+        Args:
+            particle_count: Number of particles.
+            global_localization: First localization if True, pose tracking otherwise.
+            initial_pose: Approximate initial robot pose (x, y, theta) for tracking [m, m, rad].
+            initial_pose_sigma: Standard deviation of the initial pose guess [m, m, rad].
 
-            Returns: A NumPy array of tuples (x, y, theta) [m, m, rad].
-            """
-            
-            particles = np.empty((particle_count, 3), dtype=float)
-            min_x, min_y, max_x, max_y = self._map.bounds()
-            valid_orientations = [0, np.pi/2, np.pi, 3*np.pi/2]
+        Returns: A NumPy array of tuples (x, y, theta) [m, m, rad].
+        """
 
-            # TODO: 3.4. Complete the missing function body with your code.
+        particles = np.empty((particle_count, 3), dtype=float)
+        min_x, min_y, max_x, max_y = self._map.bounds()
+        valid_orientations = [0, np.pi / 2, np.pi, 3 * np.pi / 2]
 
-            valid_particles = 0
+        # TODO: 3.4. Complete the missing function body with your code.
 
-            if global_localization:
-                while valid_particles < particle_count:
-                    
-                    x = random.uniform(min_x, max_x)
-                    y = random.uniform(min_y, max_y)
-                    theta = random.choice(valid_orientations)
-                    
-                    if self._map.contains((x, y)):
-                        particles[valid_particles] = (x, y, theta)
-                        valid_particles += 1
+        valid_particles = 0
 
-            else:
-                while valid_particles < particle_count:
-                    x = random.gauss(initial_pose[0], initial_pose_sigma[0])
-                    y = random.gauss(initial_pose[1], initial_pose_sigma[1])
-                    theta = random.gauss(initial_pose[2], initial_pose_sigma[2])
+        if global_localization:
+            while valid_particles < particle_count:
+                x = random.uniform(min_x, max_x)
+                y = random.uniform(min_y, max_y)
+                theta = random.choice(valid_orientations)
 
-                    if self._map.contains((x, y)):
-                        particles[valid_particles] = (x, y, theta)
-                        valid_particles += 1
-            
-            return particles
+                if self._map.contains((x, y)):
+                    particles[valid_particles] = (x, y, theta)
+                    valid_particles += 1
+
+        else:
+            while valid_particles < particle_count:
+                x = random.gauss(initial_pose[0], initial_pose_sigma[0])
+                y = random.gauss(initial_pose[1], initial_pose_sigma[1])
+                theta = random.gauss(initial_pose[2], initial_pose_sigma[2])
+
+                if self._map.contains((x, y)):
+                    particles[valid_particles] = (x, y, theta)
+                    valid_particles += 1
+
+        return particles
 
     def _sense(self, particle: tuple[float, float, float]) -> list[float]:
         """Obtains the predicted measurement of every LiDAR ray given the robot's pose.

@@ -29,6 +29,8 @@ class PRMNode(LifecycleNode):
         self.declare_parameter("smoothing_smooth_weight", 0.3)
         self.declare_parameter("use_grid", False)
         self.declare_parameter("world", "project")
+        self._start = None
+
 
     def on_configure(self, state: LifecycleState) -> TransitionCallbackReturn:
         """Handles a configuring transition.
@@ -108,12 +110,16 @@ class PRMNode(LifecycleNode):
 
             # Publishers
             # TODO: 4.6. Create the /path publisher (Path message).
-            self.path_publisher = self.create_publisher(Path, "path", 10)
+            self.path_publisher = self.create_publisher(Path, "/path", 10)
 
             # Subscribers
             self._subscriber_pose = self.create_subscription(
                 AmrPoseStamped, "/pose", self._path_callback, 10
             )
+            self._subscriber_start = self.create_subscription(
+                AmrPoseStamped, "/start_pose", self._start_callback, 10
+            )
+
 
         except Exception:
             self.get_logger().error(f"{traceback.format_exc()}")
@@ -132,6 +138,11 @@ class PRMNode(LifecycleNode):
 
         return super().on_activate(state)
 
+    def _start_callback(self, pose_msg: AmrPoseStamped):
+        """Callback to receive the start pose once localized."""
+        if pose_msg.localized:
+            self._start = (pose_msg.pose.position.x, pose_msg.pose.position.y)
+
     def _path_callback(self, pose_msg: AmrPoseStamped):
         """Subscriber callback. Finds a path using A* and publishes the smoothed path to the goal.
 
@@ -140,8 +151,11 @@ class PRMNode(LifecycleNode):
 
         """
         if pose_msg.localized and not self._localized:
-            start = (pose_msg.pose.position.x, pose_msg.pose.position.y)
+            if self._start is None:
+                self.get_logger().warn("Waiting for start pose after localization...")
+                return
 
+            start = self._start
             start_time = time.perf_counter()
             path = self._planning.find_path(start, self._goal)
             pathfinding_time = time.perf_counter() - start_time

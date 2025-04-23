@@ -86,8 +86,12 @@ class PRM:
             raise ValueError("Start or goal location is outside the accessible area.")
 
         # Initialize start and goal nodes
-        start_node = min(self._graph.keys(), key=lambda node: np.hypot(node[0] - start[0], node[1] - start[1]))
-        goal_node = min(self._graph.keys(), key=lambda node: np.hypot(node[0] - goal[0], node[1] - goal[1]))
+        start_node = min(
+            self._graph.keys(), key=lambda node: np.hypot(node[0] - start[0], node[1] - start[1])
+        )
+        goal_node = min(
+            self._graph.keys(), key=lambda node: np.hypot(node[0] - goal[0], node[1] - goal[1])
+        )
 
         open_list = {start_node: (0, 0)}  # node: (f, g)
         closed_list = set()
@@ -359,7 +363,6 @@ class PRM:
         graph: dict[tuple[float, float], list[tuple[float, float]]] = {}
 
         # TODO: 4.1. Complete the missing function body with your code.
-        graph = {}
         x_min, y_min, x_max, y_max = self._map.bounds()
 
         if use_grid:

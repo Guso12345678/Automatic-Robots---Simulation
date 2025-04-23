@@ -1,6 +1,5 @@
 import numpy as np
 
-
 class PurePursuit:
     """Class to follow a path using a simple pure pursuit controller."""
 
@@ -19,7 +18,7 @@ class PurePursuit:
     def compute_commands(self, x: float, y: float, theta: float) -> tuple[float, float]:
         """Pure pursuit controller implementation.
 
-        Args:
+            Args:
             x: Estimated robot x coordinate [m].
             y: Estimated robot y coordinate [m].
             theta: Estimated robot heading [rad].
@@ -29,25 +28,41 @@ class PurePursuit:
             w: Angular velocity [rad/s].
 
         """
-        # TODO: 4.11. Complete the function body with your code (i.e., compute v and w).
+        # TODO: 4.11. Complete the body function with your code
+        # Initialize velocities
         v = 0.0
         w = 0.0
 
+        # Check if path exists
         if not self._path:
             return v, w
 
-        closest_xy, closest_idx = self._find_closest_point(x, y)
-        target_xy = self._find_target_point(closest_xy, closest_idx)
+        # Find closest point on path and target point
+        _, closest_idx = self._find_closest_point(x, y)
+        target_xy = self._find_target_point((x, y), closest_idx)
 
         dx = target_xy[0] - x
         dy = target_xy[1] - y
-        L = np.hypot(dx, dy)
-    
+
         beta = np.arctan2(dy, dx)
-        alpha = beta - theta
-        
-        v = 0.15
-        w = 2 * v * np.sin(alpha) / L
+        angle_diff = beta - theta
+        alpha = np.arctan2(np.sin(angle_diff), np.cos(angle_diff))
+
+        rotation_threshold = np.pi / 8
+
+        if abs(alpha) > rotation_threshold:
+            v = 0.0
+            w = alpha
+            w = max(min(w, 1.0), -1.0)
+        else:
+            v = 0.1
+            dist_l = np.hypot(dx, dy)
+
+            if dist_l < 1e-3:
+                w = 0.0
+            else:
+                w = 2 * v * np.sin(alpha) / dist_l
+                w = max(min(w, 1.0), -1.0)
 
         return v, w
 
@@ -61,9 +76,7 @@ class PurePursuit:
         """Path setter."""
         self._path = value
 
-    def _find_closest_point(
-        self, x: float, y: float
-    ) -> tuple[tuple[float, float], int]:
+    def _find_closest_point(self, x: float, y: float) -> tuple[tuple[float, float], int]:
         """Find the closest path point to the current robot pose.
 
         Args:
@@ -78,17 +91,15 @@ class PurePursuit:
         # TODO: 4.9. Complete the function body (i.e., find closest_xy and closest_idx).
         closest_xy = (0.0, 0.0)
         closest_idx = 0
-        min_distance = np.inf 
+        min_distance = np.inf
 
         for idx, (pos_x, pos_y) in enumerate(self._path):
             distance_squared = (x - pos_x) ** 2 + (y - pos_y) ** 2
-            
+
             if distance_squared < min_distance:
                 closest_idx = idx
                 closest_xy = (pos_x, pos_y)
                 min_distance = distance_squared
-
-        min_distance = np.sqrt(min_distance)
 
         return closest_xy, closest_idx
 

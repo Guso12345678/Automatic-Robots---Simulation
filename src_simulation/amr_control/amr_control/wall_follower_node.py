@@ -43,7 +43,7 @@ class WallFollowerNode(LifecycleNode):
             enable_localization = (
                 self.get_parameter("enable_localization").get_parameter_value().bool_value
             )
-
+            self._localized = not enable_localization
             # Subscribers
             self._subscribers: list[message_filters.Subscriber] = []
             self._subscribers.append(
@@ -71,13 +71,11 @@ class WallFollowerNode(LifecycleNode):
 
             # TODO: 4.12. Add the /pose subscriber to the list of subscribers if enable_localization is True.
             if enable_localization:
-                self._subscribers.append(
-                    message_filters.Subscriber(
-                        self,
-                        PoseStamped,
-                        "/pose",
-                        qos_profile=10,
-                    )
+                self._pose_subscriber = self.create_subscription(
+                    PoseStamped,
+                    "/pose",
+                    self._pose_callback,
+                    qos_profile=10,
                 )
 
             self.ts = message_filters.ApproximateTimeSynchronizer(
@@ -111,12 +109,15 @@ class WallFollowerNode(LifecycleNode):
         self.get_logger().info(f"Transitioning from '{state.label}' to 'active' state.")
 
         return super().on_activate(state)
+    
+    def _pose_callback(self, pose_msg: PoseStamped):
+        """Updates internal flag when robot is localized."""
+        self._localized = pose_msg.localized
 
     def _compute_commands_callback(
         self,
         odom_msg: Odometry,
         scan_msg: LaserScan,
-        pose_msg: PoseStamped = PoseStamped(),
     ):
         """Subscriber callback. Executes a wall-following controller and publishes v and w commands.
 
@@ -128,7 +129,8 @@ class WallFollowerNode(LifecycleNode):
             pose_msg: Message containing the estimated robot pose.
 
         """
-        if not pose_msg.localized:
+        if not self._localized:
+            self.get_logger().info(f"Localized: {self._localized}")
             # TODO: 2.8. Parse the odometry from the Odometry message (i.e., read z_v and z_w).
             z_v: float = odom_msg.twist.twist.linear.x
             z_w: float = odom_msg.twist.twist.angular.z
